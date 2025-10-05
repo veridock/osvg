@@ -1,0 +1,15 @@
+# /osvg/apps/.htaccess
+
+# Blokuj dostęp do wrażliwych plików
+<FilesMatch "\.(env|db|sql|log)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Blokuj dostęp do katalogów git
+RedirectMatch 404 /\.git
+
+# Ustaw headers bezpieczeństwa
+Header set X-Frame-Options "SAMEORIGIN"
+Header set X-Content-Type-Options "nosniff"
+Header set X-XSS-Protection "1; mode=block"

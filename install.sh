@@ -1,6 +1,7 @@
 #!/bin/bash
-# RPi PHP Platform Installer
+# RPi PHP Platform Installer - Multi-Linux Support
 # One-liner: curl -sSL https://example.com/install.sh | sudo bash
+# Supports: Debian, Ubuntu, Fedora, CentOS/RHEL, Arch Linux
 
 set -e
 
@@ -20,36 +21,184 @@ BACKUP_DIR="$PLATFORM_DIR/backups"
 CONFIG_DIR="$PLATFORM_DIR/config"
 CADDY_CONFIG="/etc/caddy/Caddyfile"
 
-# Aktualizacja systemu
-echo -e "${YELLOW}Aktualizacja systemu...${NC}"
-apt-get update && apt-get upgrade -y
+# Wykrycie dystrybucji
+detect_distro() {
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        DISTRO=$ID
+        VERSION=$VERSION_ID
+    elif [ -f /etc/redhat-release ]; then
+        DISTRO="rhel"
+    else
+        echo -e "${RED}Nie można wykryć dystrybucji Linux${NC}"
+        exit 1
+    fi
+    
+    echo -e "${GREEN}Wykryto: $DISTRO $VERSION${NC}"
+}
 
-# Instalacja zależności
-echo -e "${YELLOW}Instalacja zależności...${NC}"
-apt-get install -y \
-    php8.2-fpm \
-    php8.2-cli \
-    php8.2-mbstring \
-    php8.2-xml \
-    php8.2-zip \
-    php8.2-curl \
-    php8.2-gd \
-    php8.2-sqlite3 \
-    php8.2-json \
-    git \
-    curl \
-    wget \
-    sqlite3 \
-    supervisor \
-    jq
+# Instalacja pakietów - Debian/Ubuntu
+install_debian() {
+    echo -e "${YELLOW}Aktualizacja systemu (Debian/Ubuntu)...${NC}"
+    apt-get update && apt-get upgrade -y
+    
+    echo -e "${YELLOW}Instalacja zależności...${NC}"
+    
+    # Dodaj repozytorium PHP jeśli potrzebne
+    apt-get install -y software-properties-common
+    add-apt-repository ppa:ondrej/php -y 2>/dev/null || true
+    apt-get update
+    
+    apt-get install -y \
+        php8.2-fpm \
+        php8.2-cli \
+        php8.2-mbstring \
+        php8.2-xml \
+        php8.2-zip \
+        php8.2-curl \
+        php8.2-gd \
+        php8.2-sqlite3 \
+        php8.2-json \
+        git \
+        curl \
+        wget \
+        sqlite3 \
+        supervisor \
+        jq
+    
+    PHP_FPM_SOCK="/run/php/php8.2-fpm.sock"
+    
+    # Instalacja Caddy
+    echo -e "${YELLOW}Instalacja Caddy...${NC}"
+    apt install -y debian-keyring debian-archive-keyring apt-transport-https
+    curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+    curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
+    apt update
+    apt install caddy -y
+}
 
-# Instalacja Caddy
-echo -e "${YELLOW}Instalacja Caddy...${NC}"
-apt install -y debian-keyring debian-archive-keyring apt-transport-https
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
-apt update
-apt install caddy -y
+# Instalacja pakietów - Fedora
+install_fedora() {
+    echo -e "${YELLOW}Aktualizacja systemu (Fedora)...${NC}"
+    dnf update -y
+    
+    echo -e "${YELLOW}Instalacja zależności...${NC}"
+    
+    # Włącz repozytorium Remi dla nowszego PHP
+    dnf install -y https://rpms.remirepo.net/fedora/remi-release-$(rpm -E %fedora).rpm
+    dnf module reset php -y
+    dnf module enable php:remi-8.2 -y
+    
+    dnf install -y \
+        php \
+        php-fpm \
+        php-cli \
+        php-mbstring \
+        php-xml \
+        php-zip \
+        php-curl \
+        php-gd \
+        php-pdo \
+        php-json \
+        git \
+        curl \
+        wget \
+        sqlite \
+        supervisor \
+        jq
+    
+    PHP_FPM_SOCK="/run/php-fpm/www.sock"
+    
+    # Instalacja Caddy
+    echo -e "${YELLOW}Instalacja Caddy...${NC}"
+    dnf install -y 'dnf-command(copr)'
+    dnf copr enable -y @caddy/caddy
+    dnf install -y caddy
+}
+
+# Instalacja pakietów - CentOS/RHEL
+install_rhel() {
+    echo -e "${YELLOW}Aktualizacja systemu (RHEL/CentOS)...${NC}"
+    yum update -y
+    
+    echo -e "${YELLOW}Instalacja EPEL...${NC}"
+    yum install -y epel-release
+    
+    echo -e "${YELLOW}Instalacja zależności...${NC}"
+    
+    # Włącz repozytorium Remi
+    yum install -y https://rpms.remirepo.net/enterprise/remi-release-$(rpm -E %rhel).rpm
+    yum-config-manager --enable remi-php82
+    
+    yum install -y \
+        php \
+        php-fpm \
+        php-cli \
+        php-mbstring \
+        php-xml \
+        php-zip \
+        php-curl \
+        php-gd \
+        php-pdo \
+        php-json \
+        git \
+        curl \
+        wget \
+        sqlite \
+        supervisor \
+        jq
+    
+    PHP_FPM_SOCK="/run/php-fpm/www.sock"
+    
+    # Instalacja Caddy
+    echo -e "${YELLOW}Instalacja Caddy...${NC}"
+    yum install -y yum-plugin-copr
+    yum copr enable -y @caddy/caddy
+    yum install -y caddy
+}
+
+# Instalacja pakietów - Arch Linux
+install_arch() {
+    echo -e "${YELLOW}Aktualizacja systemu (Arch Linux)...${NC}"
+    pacman -Syu --noconfirm
+    
+    echo -e "${YELLOW}Instalacja zależności...${NC}"
+    pacman -S --noconfirm \
+        php \
+        php-fpm \
+        git \
+        curl \
+        wget \
+        sqlite \
+        supervisor \
+        jq \
+        caddy
+    
+    PHP_FPM_SOCK="/run/php-fpm/php-fpm.sock"
+}
+
+# Wykryj dystrybucję i zainstaluj pakiety
+detect_distro
+
+case $DISTRO in
+    debian|ubuntu|raspbian)
+        install_debian
+        ;;
+    fedora)
+        install_fedora
+        ;;
+    rhel|centos|rocky|almalinux)
+        install_rhel
+        ;;
+    arch|manjaro)
+        install_arch
+        ;;
+    *)
+        echo -e "${RED}Nieobsługiwana dystrybucja: $DISTRO${NC}"
+        echo -e "${YELLOW}Obsługiwane dystrybucje: Debian, Ubuntu, Fedora, RHEL/CentOS, Arch Linux${NC}"
+        exit 1
+        ;;
+esac
 
 # Tworzenie struktury katalogów
 echo -e "${YELLOW}Tworzenie struktury katalogów...${NC}"
@@ -101,7 +250,7 @@ sqlite3 $DATA_DIR/db/platform.db "INSERT INTO api_keys (key_hash, name, permissi
 
 # Tworzenie głównej konfiguracji Caddy
 echo -e "${YELLOW}Konfiguracja Caddy...${NC}"
-cat > $CADDY_CONFIG << 'EOF'
+cat > $CADDY_CONFIG << EOF
 {
     auto_https on
     email admin@example.com
@@ -110,7 +259,7 @@ cat > $CADDY_CONFIG << 'EOF'
 # Manager aplikacji
 manager.local {
     root * /osvg/apps/manager
-    php_fastcgi unix//run/php/php8.2-fpm.sock
+    php_fastcgi unix/$PHP_FPM_SOCK
     file_server
     encode gzip
     
@@ -124,7 +273,7 @@ manager.local {
         path *.svg
     }
     handle @svg {
-        php_fastcgi unix//run/php/php8.2-fpm.sock
+        php_fastcgi unix/$PHP_FPM_SOCK
     }
 }
 

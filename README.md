@@ -1,5 +1,54 @@
 # osvg
 
+# RPi PHP Platform
+
+System do zarządzania aplikacjami PHP na Raspberry Pi z automatycznym deploymentem.
+
+## Instalacja
+
+One-liner:
+```bash
+curl -sSL https://raw.githubusercontent.com/your-repo/rpi-osvg/main/install.sh | sudo bash
+```
+
+## Funkcje
+
+- ✅ Automatyczny deployment z Git
+- ✅ Obsługa SVG z wbudowanym PHP
+- ✅ Szyfrowanie Let's Encrypt przez Caddy
+- ✅ Web IDE z edytorem i terminalem
+- ✅ API do zarządzania aplikacjami
+- ✅ Automatyczne backupy i rollback
+- ✅ Monitoring systemu
+
+## Użycie
+
+### Dodanie aplikacji przez CLI:
+```bash
+/osvg/deploy.sh my-app git@github.com:user/repo.git app.local
+```
+
+### Przez API:
+```bash
+curl -X POST https://manager.local/api/apps \
+  -H "X-API-Key: YOUR_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"my-app","domain":"app.local","git_uri":"git@github.com:user/repo.git"}'
+```
+
+### Przez Web UI:
+Otwórz https://manager.local w przeglądarce.
+
+## Struktura aplikacji
+
+Aplikacje mogą być w dowolnym formacie obsługiwanym przez PHP:
+- `.php` - standardowe pliki PHP
+- `.svg` - SVG z wbudowanym PHP
+- `.html` - HTML z PHP
+- `.xml` - XML z PHP
+
+## Licencja
+
 System jest gotowy do użycia i pozwala na łatwe zarządzanie wieloma aplikacjami PHP na Raspberry Pi Zero z pełną automatyzacją deploymentu i zarządzania.
 
 
@@ -83,3 +132,6 @@ Manager aplikacji będzie udostępniał następujące endpointy:
 - `POST /api/apps/{id}/deploy` - Wdrożenie aplikacji
 - `POST /api/apps/{id}/rollback` - Rollback aplikacji
 - `GET /api/system/status` - Status systemu
+
+
+
