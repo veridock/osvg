@@ -49,13 +49,13 @@ Dashboard systemowy w formacie SVG z PHP, który pokazuje:
 ## 2. One-liner instalacyjny
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/your-repo/rpi-php-platform/main/install.sh | sudo bash
+curl -sSL https://raw.githubusercontent.com/your-repo/rpi-osvg/main/install.sh | sudo bash
 ```
 
 ## 3. Struktura katalogów
 
 ```
-.
+./osvg/
 ├── apps/               # Aplikacje
 │   └── manager/        # Aplikacja zarządzająca
 ├── data/              # Dane

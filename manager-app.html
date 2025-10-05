@@ -281,7 +281,7 @@
     session_start();
     
     // Konfiguracja
-    $platform_dir = '/opt/php-platform';
+    $platform_dir = '/osvg';
     $apps_dir = $platform_dir . '/apps';
     $db_path = $platform_dir . '/data/db/platform.db';
     
@@ -476,7 +476,7 @@ $ </div>
             fetch('', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                body: 'action=get_files&path=/opt/php-platform/apps'
+                body: 'action=get_files&path=/osvg/apps'
             })
             .then(response => response.json())
             .then(files => {
@@ -646,7 +646,7 @@ $ </div>
             fetch('', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                body: 'action=execute&command=' + encodeURIComponent('/opt/php-platform/update-all.sh')
+                body: 'action=execute&command=' + encodeURIComponent('/osvg/update-all.sh')
             })
             .then(response => response.json())
             .then(data => {
@@ -659,7 +659,7 @@ $ </div>
             fetch('', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                body: 'action=execute&command=' + encodeURIComponent('/opt/php-platform/backup.sh backup ' + name)
+                body: 'action=execute&command=' + encodeURIComponent('/osvg/backup.sh backup ' + name)
             })
             .then(response => response.json())
             .then(data => {
@@ -672,7 +672,7 @@ $ </div>
                 fetch('', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                    body: 'action=execute&command=' + encodeURIComponent('/opt/php-platform/backup.sh rollback ' + name)
+                    body: 'action=execute&command=' + encodeURIComponent('/osvg/backup.sh rollback ' + name)
                 })
                 .then(response => response.json())
                 .then(data => {

@@ -13,7 +13,7 @@ NC='\033[0m'
 echo -e "${GREEN}=== RPi PHP Platform Installer ===${NC}"
 
 # Konfiguracja
-PLATFORM_DIR="/opt/php-platform"
+PLATFORM_DIR="/osvg"
 APPS_DIR="$PLATFORM_DIR/apps"
 DATA_DIR="$PLATFORM_DIR/data"
 BACKUP_DIR="$PLATFORM_DIR/backups"
@@ -109,7 +109,7 @@ cat > $CADDY_CONFIG << 'EOF'
 
 # Manager aplikacji
 manager.local {
-    root * /opt/php-platform/apps/manager
+    root * /osvg/apps/manager
     php_fastcgi unix//run/php/php8.2-fpm.sock
     file_server
     encode gzip
@@ -128,7 +128,7 @@ manager.local {
     }
 }
 
-import /opt/php-platform/config/caddy/*.conf
+import /osvg/config/caddy/*.conf
 EOF
 
 mkdir -p $CONFIG_DIR/caddy
@@ -162,7 +162,7 @@ if [ -z "$APP_NAME" ] || [ -z "$GIT_URI" ] || [ -z "$DOMAIN" ]; then
     exit 1
 fi
 
-source /opt/php-platform/.env
+source /osvg/.env
 
 APP_PATH="$APPS_DIR/$APP_NAME"
 
@@ -223,7 +223,7 @@ cat > $PLATFORM_DIR/backup.sh << 'BACKUP_SCRIPT'
 ACTION=$1
 APP_NAME=$2
 
-source /opt/php-platform/.env
+source /osvg/.env
 
 case $ACTION in
     backup)
@@ -259,18 +259,18 @@ BACKUP_SCRIPT
 chmod +x $PLATFORM_DIR/backup.sh
 
 # Tworzenie automatycznej aktualizacji (cron)
-cat > /etc/cron.d/php-platform << 'EOF'
+cat > /etc/cron.d/osvg << 'EOF'
 # Automatyczna aktualizacja aplikacji co godzinę
-0 * * * * root /opt/php-platform/update-all.sh >> /opt/php-platform/logs/update.log 2>&1
+0 * * * * root /osvg/update-all.sh >> /osvg/logs/update.log 2>&1
 
 # Automatyczny backup co 6 godzin
-0 */6 * * * root /opt/php-platform/backup-all.sh >> /opt/php-platform/logs/backup.log 2>&1
+0 */6 * * * root /osvg/backup-all.sh >> /osvg/logs/backup.log 2>&1
 EOF
 
 # Skrypt aktualizacji wszystkich aplikacji
 cat > $PLATFORM_DIR/update-all.sh << 'UPDATE_SCRIPT'
 #!/bin/bash
-source /opt/php-platform/.env
+source /osvg/.env
 
 sqlite3 "$DB_PATH" "SELECT name, path FROM apps WHERE status='active';" | while IFS='|' read -r name path; do
     echo "Aktualizacja: $name"
@@ -284,17 +284,17 @@ chmod +x $PLATFORM_DIR/update-all.sh
 # Skrypt backup wszystkich aplikacji  
 cat > $PLATFORM_DIR/backup-all.sh << 'BACKUP_ALL'
 #!/bin/bash
-source /opt/php-platform/.env
+source /osvg/.env
 
 sqlite3 "$DB_PATH" "SELECT name FROM apps WHERE status='active';" | while read -r name; do
-    /opt/php-platform/backup.sh backup "$name"
+    /osvg/backup.sh backup "$name"
 done
 BACKUP_ALL
 
 chmod +x $PLATFORM_DIR/backup-all.sh
 
 # Tworzenie usługi systemd dla platform managera
-cat > /etc/systemd/system/php-platform.service << 'EOF'
+cat > /etc/systemd/system/osvg.service << 'EOF'
 [Unit]
 Description=PHP Platform Manager
 After=network.target
@@ -302,8 +302,8 @@ After=network.target
 [Service]
 Type=simple
 User=www-data
-WorkingDirectory=/opt/php-platform
-ExecStart=/usr/bin/php -S 0.0.0.0:8080 -t /opt/php-platform/apps/manager
+WorkingDirectory=/osvg
+ExecStart=/usr/bin/php -S 0.0.0.0:8080 -t /osvg/apps/manager
 Restart=always
 
 [Install]
@@ -320,8 +320,8 @@ systemctl daemon-reload
 systemctl enable caddy
 systemctl restart caddy
 systemctl restart php8.2-fpm
-systemctl enable php-platform
-systemctl start php-platform
+systemctl enable osvg
+systemctl start osvg
 
 # Informacje końcowe
 echo -e "${GREEN}=== Instalacja zakończona ===${NC}"

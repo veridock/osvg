@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  osvg:
+    build: .
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - ./apps:/osvg/apps
+      - ./data:/osvg/data
+      - ./backups:/osvg/backups
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      - ADMIN_EMAIL=admin@example.com
+    networks:
+      - platform-network
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+networks:
+  platform-network:

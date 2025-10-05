@@ -7,16 +7,16 @@
 version: '3.8'
 
 services:
-  php-platform:
+  osvg:
     build: .
     ports:
       - "80:80"
       - "443:443"
       - "8080:8080"
     volumes:
-      - ./apps:/opt/php-platform/apps
-      - ./data:/opt/php-platform/data
-      - ./backups:/opt/php-platform/backups
+      - ./apps:/osvg/apps
+      - ./data:/osvg/data
+      - ./backups:/osvg/backups
       - caddy_data:/data
       - caddy_config:/config
     environment:
@@ -55,7 +55,7 @@ CMD ["supervisord", "-n"]
 
 ```php
 <?php
-// /opt/php-platform/apps/manager/api.php
+// /osvg/apps/manager/api.php
 
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
@@ -63,7 +63,7 @@ header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE');
 header('Access-Control-Allow-Headers: X-API-Key, Content-Type');
 
 // Sprawdzenie klucza API
-$config = parse_ini_file('/opt/php-platform/.env');
+$config = parse_ini_file('/osvg/.env');
 $api_key = $_SERVER['HTTP_X_API_KEY'] ?? '';
 
 if (empty($api_key)) {
@@ -134,11 +134,11 @@ function handleApps($method, $segments, $db) {
             $stmt->bindValue(':domain', $data['domain']);
             $stmt->bindValue(':git_uri', $data['git_uri']);
             $stmt->bindValue(':public_key', $data['public_key'] ?? '');
-            $stmt->bindValue(':path', "/opt/php-platform/apps/{$data['name']}");
+            $stmt->bindValue(':path', "/osvg/apps/{$data['name']}");
             
             if ($stmt->execute()) {
                 // Uruchom deployment
-                $output = shell_exec("/opt/php-platform/deploy.sh '{$data['name']}' '{$data['git_uri']}' '{$data['domain']}' '{$data['public_key']}'");
+                $output = shell_exec("/osvg/deploy.sh '{$data['name']}' '{$data['git_uri']}' '{$data['domain']}' '{$data['public_key']}'");
                 echo json_encode(['success' => true, 'output' => $output]);
             } else {
                 http_response_code(500);
@@ -172,7 +172,7 @@ function handleApps($method, $segments, $db) {
                 if ($app) {
                     // Usuń pliki
                     shell_exec("rm -rf {$app['path']}");
-                    shell_exec("rm -f /opt/php-platform/config/caddy/{$app['name']}.conf");
+                    shell_exec("rm -f /osvg/config/caddy/{$app['name']}.conf");
                     
                     // Usuń z bazy
                     $stmt = $db->prepare("DELETE FROM apps WHERE id = :id");
@@ -219,7 +219,7 @@ function handleSystem($method, $segments) {
             break;
             
         case 'logs':
-            $logs = shell_exec('tail -n 100 /opt/php-platform/logs/platform.log');
+            $logs = shell_exec('tail -n 100 /osvg/logs/platform.log');
             echo json_encode(['logs' => $logs]);
             break;
     }
@@ -240,7 +240,7 @@ function handleDeploy($method) {
         return;
     }
     
-    $output = shell_exec("/opt/php-platform/deploy.sh '{$data['name']}' '{$data['git_uri']}' '{$data['domain']}' '{$data['public_key']}'");
+    $output = shell_exec("/osvg/deploy.sh '{$data['name']}' '{$data['git_uri']}' '{$data['domain']}' '{$data['public_key']}'");
     echo json_encode(['success' => true, 'output' => $output]);
 }
 ```
@@ -272,9 +272,9 @@ curl -X GET https://manager.local/api/system/status \
 
 ```bash
 #!/bin/bash
-# /opt/php-platform/monitor.sh
+# /osvg/monitor.sh
 
-source /opt/php-platform/.env
+source /osvg/.env
 
 # Sprawdź status aplikacji
 check_apps() {
@@ -334,16 +334,16 @@ main >> "$PLATFORM_DIR/logs/monitor.log" 2>&1
 # Dodaj do /etc/crontab
 
 # Monitoring co 5 minut
-*/5 * * * * root /opt/php-platform/monitor.sh
+*/5 * * * * root /osvg/monitor.sh
 
 # Aktualizacja aplikacji co godzinę
-0 * * * * root /opt/php-platform/update-all.sh
+0 * * * * root /osvg/update-all.sh
 
 # Backup co 6 godzin
-0 */6 * * * root /opt/php-platform/backup-all.sh
+0 */6 * * * root /osvg/backup-all.sh
 
 # Czyszczenie logów raz dziennie
-0 3 * * * root find /opt/php-platform/logs -type f -mtime +30 -delete
+0 3 * * * root find /osvg/logs -type f -mtime +30 -delete
 
 # Restart PHP-FPM raz w tygodniu (opcjonalnie)
 0 4 * * 0 root systemctl restart php8.2-fpm
@@ -352,7 +352,7 @@ main >> "$PLATFORM_DIR/logs/monitor.log" 2>&1
 ## 7. Konfiguracja zabezpieczeń (.htaccess)
 
 ```apache
-# /opt/php-platform/apps/.htaccess
+# /osvg/apps/.htaccess
 
 # Blokuj dostęp do wrażliwych plików
 <FilesMatch "\.(env|db|sql|log)$">
@@ -380,7 +380,7 @@ System do zarządzania aplikacjami PHP na Raspberry Pi z automatycznym deploymen
 
 One-liner:
 ```bash
-curl -sSL https://raw.githubusercontent.com/your-repo/rpi-php-platform/main/install.sh | sudo bash
+curl -sSL https://raw.githubusercontent.com/your-repo/rpi-osvg/main/install.sh | sudo bash
 ```
 
 ## Funkcje
@@ -397,7 +397,7 @@ curl -sSL https://raw.githubusercontent.com/your-repo/rpi-php-platform/main/inst
 
 ### Dodanie aplikacji przez CLI:
 ```bash
-/opt/php-platform/deploy.sh my-app git@github.com:user/repo.git app.local
+/osvg/deploy.sh my-app git@github.com:user/repo.git app.local
 ```
 
 ### Przez API:
