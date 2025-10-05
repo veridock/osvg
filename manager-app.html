@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RPi PHP Platform Manager</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Consolas', 'Monaco', monospace;
+            background: #0a0a0a;
+            color: #00ff00;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #001100 0%, #003300 100%);
+            padding: 10px 20px;
+            border-bottom: 2px solid #00ff00;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            font-size: 20px;
+            text-shadow: 0 0 10px #00ff00;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .tab {
+            padding: 8px 16px;
+            background: #001100;
+            border: 1px solid #00ff00;
+            color: #00ff00;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+        
+        .tab.active {
+            background: #00ff00;
+            color: #000;
+        }
+        
+        .tab:hover {
+            background: #003300;
+        }
+        
+        .container {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+        
+        .sidebar {
+            width: 250px;
+            background: #001100;
+            border-right: 1px solid #00ff00;
+            overflow-y: auto;
+        }
+        
+        .file-tree {
+            padding: 10px;
+        }
+        
+        .tree-item {
+            padding: 5px 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .tree-item:hover {
+            background: #003300;
+        }
+        
+        .tree-item.selected {
+            background: #00ff00;
+            color: #000;
+        }
+        
+        .tree-folder::before {
+            content: "📁";
+        }
+        
+        .tree-file::before {
+            content: "📄";
+        }
+        
+        .editor-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .editor-header {
+            background: #001100;
+            padding: 10px;
+            border-bottom: 1px solid #00ff00;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .editor-textarea {
+            flex: 1;
+            background: #000;
+            color: #00ff00;
+            border: none;
+            padding: 20px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            resize: none;
+            outline: none;
+        }
+        
+        .terminal-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #000;
+        }
+        
+        .terminal-output {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+        }
+        
+        .terminal-input-container {
+            display: flex;
+            border-top: 1px solid #00ff00;
+        }
+        
+        .terminal-prompt {
+            padding: 10px;
+            background: #001100;
+            color: #00ff00;
+        }
+        
+        .terminal-input {
+            flex: 1;
+            background: #000;
+            color: #00ff00;
+            border: none;
+            padding: 10px;
+            font-family: inherit;
+            font-size: 14px;
+            outline: none;
+        }
+        
+        .apps-container {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .app-form {
+            background: #001100;
+            padding: 20px;
+            border: 1px solid #00ff00;
+            margin-bottom: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            color: #00ff00;
+        }
+        
+        .form-input, .form-textarea {
+            width: 100%;
+            padding: 8px;
+            background: #000;
+            border: 1px solid #00ff00;
+            color: #00ff00;
+            font-family: inherit;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            background: #00ff00;
+            color: #000;
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .btn:hover {
+            background: #00cc00;
+            box-shadow: 0 0 10px #00ff00;
+        }
+        
+        .app-list {
+            display: grid;
+            gap: 20px;
+        }
+        
+        .app-card {
+            background: #001100;
+            border: 1px solid #00ff00;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .app-info h3 {
+            color: #00ff00;
+            margin-bottom: 5px;
+        }
+        
+        .app-info p {
+            color: #00cc00;
+            font-size: 12px;
+        }
+        
+        .app-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn-small {
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #00ff00;
+        }
+        
+        .loading::after {
+            content: "...";
+            animation: dots 1.5s infinite;
+        }
+        
+        @keyframes dots {
+            0%, 20% { content: "."; }
+            40% { content: ".."; }
+            60%, 100% { content: "..."; }
+        }
+        
+        .syntax-keyword { color: #ff00ff; }
+        .syntax-string { color: #ffff00; }
+        .syntax-comment { color: #666666; }
+        .syntax-function { color: #00ffff; }
+        .syntax-variable { color: #ff6600; }
+    </style>
+</head>
+<body>
+    <?php
+    session_start();
+    
+    // Konfiguracja
+    $platform_dir = '/opt/php-platform';
+    $apps_dir = $platform_dir . '/apps';
+    $db_path = $platform_dir . '/data/db/platform.db';
+    
+    // Sprawdzenie autoryzacji (w prawdziwej aplikacji użyj .env)
+    $api_key = $_SERVER['HTTP_X_API_KEY'] ?? $_POST['api_key'] ?? $_SESSION['api_key'] ?? '';
+    
+    // Funkcje pomocnicze
+    function executeCommand($cmd) {
+        $output = shell_exec($cmd . ' 2>&1');
+        return $output;
+    }
+    
+    function getFileTree($dir, $prefix = '') {
+        $files = [];
+        $items = scandir($dir);
+        foreach ($items as $item) {
+            if ($item == '.' || $item == '..') continue;
+            $path = $dir . '/' . $item;
+            if (is_dir($path)) {
+                $files[] = ['type' => 'folder', 'name' => $item, 'path' => $path];
+                $files = array_merge($files, getFileTree($path, $prefix . '  '));
+            } else {
+                $files[] = ['type' => 'file', 'name' => $item, 'path' => $path];
+            }
+        }
+        return $files;
+    }
+    
+    // Obsługa żądań AJAX
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+        header('Content-Type: application/json');
+        
+        switch ($_POST['action']) {
+            case 'get_files':
+                $path = $_POST['path'] ?? $apps_dir;
+                echo json_encode(getFileTree($path));
+                exit;
+                
+            case 'read_file':
+                $file = $_POST['file'] ?? '';
+                if (file_exists($file)) {
+                    echo json_encode(['content' => file_get_contents($file)]);
+                } else {
+                    echo json_encode(['error' => 'File not found']);
+                }
+                exit;
+                
+            case 'save_file':
+                $file = $_POST['file'] ?? '';
+                $content = $_POST['content'] ?? '';
+                if ($file) {
+                    file_put_contents($file, $content);
+                    echo json_encode(['success' => true]);
+                } else {
+                    echo json_encode(['error' => 'No file specified']);
+                }
+                exit;
+                
+            case 'execute':
+                $command = $_POST['command'] ?? '';
+                $output = executeCommand($command);
+                echo json_encode(['output' => $output]);
+                exit;
+                
+            case 'deploy_app':
+                $name = $_POST['name'] ?? '';
+                $git_uri = $_POST['git_uri'] ?? '';
+                $domain = $_POST['domain'] ?? '';
+                $public_key = $_POST['public_key'] ?? '';
+                
+                $cmd = "$platform_dir/deploy.sh '$name' '$git_uri' '$domain' '$public_key'";
+                $output = executeCommand($cmd);
+                echo json_encode(['output' => $output]);
+                exit;
+                
+            case 'get_apps':
+                $db = new SQLite3($db_path);
+                $result = $db->query("SELECT * FROM apps ORDER BY created_at DESC");
+                $apps = [];
+                while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+                    $apps[] = $row;
+                }
+                echo json_encode($apps);
+                exit;
+        }
+    }
+    ?>
+    
+    <div class="header">
+        <h1>🚀 RPi PHP Platform Manager</h1>
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('editor')">📝 Edytor</button>
+            <button class="tab" onclick="switchTab('terminal')">💻 Terminal</button>
+            <button class="tab" onclick="switchTab('apps')">📦 Aplikacje</button>
+        </div>
+    </div>
+    
+    <!-- Edytor -->
+    <div id="editor-panel" class="container">
+        <div class="sidebar">
+            <div class="file-tree" id="file-tree">
+                <div class="loading">Ładowanie plików</div>
+            </div>
+        </div>
+        <div class="editor-container">
+            <div class="editor-header">
+                <span id="current-file">Wybierz plik</span>
+                <button class="btn btn-small" onclick="saveFile()">💾 Zapisz</button>
+            </div>
+            <textarea class="editor-textarea" id="editor" placeholder="// Wybierz plik do edycji"></textarea>
+        </div>
+    </div>
+    
+    <!-- Terminal -->
+    <div id="terminal-panel" class="container hidden">
+        <div class="terminal-container">
+            <div class="terminal-output" id="terminal-output">
+RPi PHP Platform Terminal
+========================
+Wpisz polecenie...
+
+$ </div>
+            <div class="terminal-input-container">
+                <span class="terminal-prompt">$</span>
+                <input type="text" class="terminal-input" id="terminal-input" 
+                       placeholder="Wpisz polecenie..." 
+                       onkeypress="handleTerminalInput(event)">
+            </div>
+        </div>
+    </div>
+    
+    <!-- Aplikacje -->
+    <div id="apps-panel" class="apps-container hidden">
+        <div class="app-form">
+            <h2>➕ Dodaj nową aplikację</h2>
+            <div class="form-group">
+                <label class="form-label">Nazwa aplikacji:</label>
+                <input type="text" class="form-input" id="app-name" placeholder="moja-aplikacja">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Git URI (SSH):</label>
+                <input type="text" class="form-input" id="app-git" placeholder="git@github.com:user/repo.git">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Domena:</label>
+                <input type="text" class="form-input" id="app-domain" placeholder="app.local">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Klucz publiczny SSH (opcjonalnie):</label>
+                <textarea class="form-textarea" id="app-key" rows="3" placeholder="ssh-rsa AAAA..."></textarea>
+            </div>
+            <button class="btn" onclick="deployApp()">🚀 Wdróż aplikację</button>
+        </div>
+        
+        <h2>📋 Zainstalowane aplikacje</h2>
+        <div class="app-list" id="app-list">
+            <div class="loading">Ładowanie aplikacji</div>
+        </div>
+    </div>
+    
+    <script>
+        let currentFile = null;
+        let commandHistory = [];
+        let historyIndex = -1;
+        
+        // Inicjalizacja
+        window.onload = function() {
+            loadFileTree();
+            loadApps();
+            
+            // Syntax highlighting
+            document.getElementById('editor').addEventListener('input', function() {
+                if (currentFile && currentFile.endsWith('.php')) {
+                    // Tu można dodać bardziej zaawansowane kolorowanie składni
+                }
+            });
+        };
+        
+        // Przełączanie zakładek
+        function switchTab(tab) {
+            // Ukryj wszystkie panele
+            document.querySelectorAll('.container').forEach(p => p.classList.add('hidden'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            
+            // Pokaż wybrany panel
+            document.getElementById(tab + '-panel').classList.remove('hidden');
+            event.target.classList.add('active');
+        }
+        
+        // Ładowanie drzewa plików
+        function loadFileTree() {
+            fetch('', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: 'action=get_files&path=/opt/php-platform/apps'
+            })
+            .then(response => response.json())
+            .then(files => {
+                let html = '';
+                files.forEach(file => {
+                    const icon = file.type === 'folder' ? '📁' : '📄';
+                    html += `<div class="tree-item tree-${file.type}" onclick="selectFile('${file.path}', '${file.type}')">
+                        ${icon} ${file.name}
+                    </div>`;
+                });
+                document.getElementById('file-tree').innerHTML = html;
+            });
+        }
+        
+        // Wybór pliku
+        function selectFile(path, type) {
+            if (type === 'file') {
+                currentFile = path;
+                document.getElementById('current-file').textContent = path.split('/').pop();
+                
+                // Załaduj zawartość pliku
+                fetch('', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                    body: 'action=read_file&file=' + encodeURIComponent(path)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.content !== undefined) {
+                        document.getElementById('editor').value = data.content;
+                    }
+                });
+            } else {
+                // Rozwiń/zwiń folder
+                loadFileTree(); // Tutaj można dodać logikę rozwijania
+            }
+        }
+        
+        // Zapisywanie pliku
+        function saveFile() {
+            if (!currentFile) {
+                alert('Najpierw wybierz plik');
+                return;
+            }
+            
+            const content = document.getElementById('editor').value;
+            fetch('', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: 'action=save_file&file=' + encodeURIComponent(currentFile) + 
+                      '&content=' + encodeURIComponent(content)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Plik zapisany!');
+                }
+            });
+        }
+        
+        // Terminal
+        function handleTerminalInput(event) {
+            if (event.key === 'Enter') {
+                const input = document.getElementById('terminal-input');
+                const command = input.value;
+                
+                if (command) {
+                    commandHistory.push(command);
+                    historyIndex = commandHistory.length;
+                    
+                    const output = document.getElementById('terminal-output');
+                    output.innerHTML += '$ ' + command + '\n';
+                    
+                    // Wykonaj polecenie
+                    fetch('', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                        body: 'action=execute&command=' + encodeURIComponent(command)
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        output.innerHTML += data.output + '\n$ ';
+                        output.scrollTop = output.scrollHeight;
+                    });
+                    
+                    input.value = '';
+                }
+            } else if (event.key === 'ArrowUp') {
+                if (historyIndex > 0) {
+                    historyIndex--;
+                    document.getElementById('terminal-input').value = commandHistory[historyIndex];
+                }
+            } else if (event.key === 'ArrowDown') {
+                if (historyIndex < commandHistory.length - 1) {
+                    historyIndex++;
+                    document.getElementById('terminal-input').value = commandHistory[historyIndex];
+                }
+            }
+        }
+        
+        // Wdrażanie aplikacji
+        function deployApp() {
+            const name = document.getElementById('app-name').value;
+            const git_uri = document.getElementById('app-git').value;
+            const domain = document.getElementById('app-domain').value;
+            const public_key = document.getElementById('app-key').value;
+            
+            if (!name || !git_uri || !domain) {
+                alert('Wypełnij wszystkie wymagane pola');
+                return;
+            }
+            
+            fetch('', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: 'action=deploy_app' +
+                      '&name=' + encodeURIComponent(name) +
+                      '&git_uri=' + encodeURIComponent(git_uri) +
+                      '&domain=' + encodeURIComponent(domain) +
+                      '&public_key=' + encodeURIComponent(public_key)
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert('Aplikacja wdrożona!\n' + data.output);
+                loadApps();
+                
+                // Wyczyść formularz
+                document.getElementById('app-name').value = '';
+                document.getElementById('app-git').value = '';
+                document.getElementById('app-domain').value = '';
+                document.getElementById('app-key').value = '';
+            });
+        }
+        
+        // Ładowanie listy aplikacji
+        function loadApps() {
+            fetch('', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: 'action=get_apps'
+            })
+            .then(response => response.json())
+            .then(apps => {
+                let html = '';
+                apps.forEach(app => {
+                    html += `
+                        <div class="app-card">
+                            <div class="app-info">
+                                <h3>🌐 ${app.name}</h3>
+                                <p>Domena: ${app.domain}</p>
+                                <p>Status: ${app.status}</p>
+                                <p>Ostatnia aktualizacja: ${app.last_update}</p>
+                            </div>
+                            <div class="app-actions">
+                                <button class="btn btn-small" onclick="updateApp('${app.name}')">🔄 Aktualizuj</button>
+                                <button class="btn btn-small" onclick="backupApp('${app.name}')">💾 Backup</button>
+                                <button class="btn btn-small" onclick="rollbackApp('${app.name}')">⏪ Rollback</button>
+                            </div>
+                        </div>
+                    `;
+                });
+                document.getElementById('app-list').innerHTML = html || '<p>Brak aplikacji</p>';
+            });
+        }
+        
+        function updateApp(name) {
+            fetch('', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: 'action=execute&command=' + encodeURIComponent('/opt/php-platform/update-all.sh')
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert('Aplikacja zaktualizowana');
+                loadApps();
+            });
+        }
+        
+        function backupApp(name) {
+            fetch('', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: 'action=execute&command=' + encodeURIComponent('/opt/php-platform/backup.sh backup ' + name)
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert('Backup utworzony:\n' + data.output);
+            });
+        }
+        
+        function rollbackApp(name) {
+            if (confirm('Czy na pewno chcesz przywrócić poprzednią wersję?')) {
+                fetch('', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                    body: 'action=execute&command=' + encodeURIComponent('/opt/php-platform/backup.sh rollback ' + name)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    alert('Rollback wykonany:\n' + data.output);
+                    loadApps();
+                });
+            }
+        }
+    </script>
+</body>
+</html>
